@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+  <html lang="en">
+  <head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Crypto Seed Phrase Brute Force Simulator with Coin Selection</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500&family=Roboto&display=swap');
+  
+    * {
+      margin: 0; padding: 0; box-sizing: border-box;
+    }
+    html, body {
+      height: 100%;
+      background: linear-gradient(130deg, #0d1117 0%, #161b22 100%);
+      font-family: 'Roboto', sans-serif;
+      color: #c9d1d9;
+      user-select: none;
+      overflow: hidden;
+    }
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      min-height: 100vh;
+    }
+    .window {
+      background: #161b22;
+      width: 900px;
+      max-width: 95vw;
+      border-radius: 16px;
+      box-shadow:
+        0 4px 15px rgba(0, 255, 255, 0.35),
+        inset 0 1px 2px #0f1218;
+      display: flex;
+      flex-direction: column;
+      padding: 32px 36px;
+      gap: 28px;
+      user-select: text;
+    }
+    .header {
+      border-bottom: 2px solid #39c5cf;
+      padding-bottom: 12px;
+      margin-bottom: 22px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      user-select: none;
+    }
+    .header-title {
+      font-family: 'Orbitron', monospace;
+      font-weight: 700;
+      font-size: 2.3rem;
+      color: #39c5cf;
+      letter-spacing: 1.6px;
+      text-shadow:
+        0 0 12px #39c5cfcc,
+        0 0 20px #2aa7bacc;
+    }
+    .header-subtitle {
+      color: #6fd7dfcc;
+      font-style: italic;
+      font-size: 1rem;
+      margin-top: 6px;
+    }
+    .form-row {
+      display: flex;
+      gap: 20px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    label {
+      min-width: 170px;
+      max-width: 200px;
+      font-weight: 600;
+      color: #5fd6ddd0;
+      letter-spacing: 0.01em;
+      user-select: none;
+    }
+    select {
+      flex-grow: 1;
+      background: #0d1117;
+      border: 2px solid #39c5cf;
+      border-radius: 12px;
+      color: #c9d1d9;
+      font-size: 1.05rem;
+      font-family: monospace;
+      padding: 12px 14px;
+      outline-offset: 3px;
+      transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+    select:focus {
+      border-color: #7fffd4;
+      box-shadow: 0 0 15px #7fffd4aa;
+      outline: none;
+    }
+    .coin-selection {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px 28px;
+      user-select: none;
+      padding-left: 170px;
+      max-width: 680px;
+    }
+    .coin-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      font-size: 0.95rem;
+      color: #7ee3e6;
+      transition: color 0.3s ease;
+      min-width: 110px;
+    }
+    .coin-item:hover {
+      color: #00fff7;
+    }
+    /* Visible checkboxes before each coin */
+    .coin-item input[type="checkbox"] {
+      margin: 0;
+      width: 22px;
+      height: 22px;
+      cursor: pointer;
+    }
+    .coin-label {
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      user-select: none;
+    }
+    .coin-icon {
+      width: 28px;
+      height: 28px;
+      filter: drop-shadow(0 0 1.5px rgb(0 255 255 / 0.4));
+    }
+    .button-row {
+      display: flex;
+      gap: 28px;
+    }
+    button {
+      background: #39c5cf;
+      color: #0d1117;
+      border: none;
+      border-radius: 16px;
+      font-weight: 700;
+      font-size: 1.2rem;
+      padding: 14px 32px;
+      cursor: pointer;
+      box-shadow:
+        0 0 12px #39c5cfcc,
+        0 0 25px #2aa7bacc;
+      transition:
+        background-color 0.3s ease,
+        box-shadow 0.3s ease,
+        transform 0.15s ease;
+      user-select: none;
+    }
+    button:disabled {
+      background: #216a7dcc;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+    button:hover:not(:disabled) {
+      background: #7fffd4;
+      box-shadow:
+        0 0 20px #7fffd4,
+        0 0 45px #7fffd4aa;
+      transform: scale(1.08);
+    }
+    /* Progress Bar */
+    .progress-bar-container {
+      width: 100%;
+      height: 28px;
+      background: #0b1015;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: inset 0 0 9px #7fffd477;
+    }
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(270deg, #00fff7, #00b3b3, #007575, #00b3b3, #00fff7);
+      background-size: 500% 100%;
+      animation: gradientShift 4.5s ease infinite;
+      border-radius: 16px 0 0 16px;
+      transition: width 0.3s ease;
+    }
+    @keyframes gradientShift {
+      0% { background-position: 0% 50%; }
+      100% { background-position: 100% 50%; }
+    }
+    /* Log output */
+    .log-output {
+      width: 100%;
+      height: 200px;
+      background: #0d1117;
+      border-radius: 18px;
+      border: 2px solid #39c5cf;
+      padding: 16px 18px;
+      overflow-y: auto;
+      color: #4ee0d2;
+      font-family: monospace;
+      font-size: 0.95rem;
+      line-height: 1.3;
+      white-space: pre-wrap;
+      user-select: text;
+      box-shadow: inset 0 0 20px #4ee0d288;
+    }
+    .result-display {
+      font-family: 'Courier New', Courier, monospace;
+      font-weight: 700;
+      font-size: 1.4rem;
+      user-select: text;
+      color: #21ffa8;
+      text-shadow:
+        0 0 8px #21ffa8,
+        0 0 20px #21ffa8bb;
+    }
+    .footer {
+      margin-top: 32px;
+      text-align: center;
+      color: #238f84bb;
+      font-size: 0.85rem;
+      font-style: italic;
+      user-select: none;
+    }
+    /* Responsive */
+    @media (max-width: 700px) {
+      .window {
+        width: 100%;
+        padding: 20px 24px;
+      }
+      .form-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 14px;
+      }
+      label {
+        min-width: auto;
+        margin-bottom: 7px;
+        width: 100%;
+      }
+      select {
+        max-width: 100%;
+        width: 100%;
+      }
+      .coin-selection {
+        padding-left: 0;
+        justify-content: flex-start;
+        max-width: 100%;
+      }
+      .coin-item {
+        min-width: 90px;
+        font-size: 1rem;
+      }
+      .button-row {
+        justify-content: center;
+      }
+    }
+  </style>
+  </head>
+  <body>
+  
+  <div class="window" role="main" aria-label="Seed Phrase Brute Force Simulator with coin selection">
+    <header class="header">
+      <h1 class="header-title" tabindex="0">CryptoBruteX SeedForce</h1>
+      <span class="header-subtitle" tabindex="0">Simulated Brute Force with Crypto Coin Selection</span>
+    </header>
+  
+    <div class="form-row">
+      <label for="phrase-length-input" title="Select number of words for seed phrase">Seed Phrase Length:</label>
+      <select id="phrase-length-input" aria-label="Seed phrase length selection">
+        <option value="12">12 Words</option>
+        <option value="18">18 Words</option>
+        <option value="24">24 Words</option>
+      </select>
+    </div>
+  
+    <div class="form-row" aria-label="Select Cryptocurrencies">
+      <label for="coin-selection" id="coin-select-label">Select Crypto Coins:</label>
+      <div class="coin-selection" role="group" aria-labelledby="coin-select-label" id="coin-selection">
+        <label class="coin-item coin-label" title="Bitcoin" for="checkbox-btc">
+          <input type="checkbox" id="checkbox-btc" value="btc" class="coin-checkbox" checked aria-checked="true" />
+          <svg class="coin-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="#f7931a" aria-hidden="true" focusable="false"><circle cx="16" cy="16" r="16"/>
+            <path fill="#fff" d="M21.4 12.7c-.2-1.5-1.5-2-3-2.5l.6-2.3-1.5-.4-.6 2.3c-.4-.1-.9-.2-1.4-.3l.6-2.4-1.5-.4-.6 2.3c-.3-.1-.6-.2-.9-.3v2c.3.1.5.2.6.3l-1.2 4.7c-.1.3-.4.8-1 .6.2.3.7.4 1.2.3l-.7 2.7 1.5.4.7-2.7c.5.1 1 .1 1.5.1 1.5 0 2.5-1 2.7-2.5.3-1.7-1-2.7-2.4-3.2zm-1 3.6c-.1.4-.5.7-1 .7-.3 0-.6 0-.8-.1l.7-2.7c.2.1.4.2.6.4.3.2.5.5.5.8 0 .4-.1.8-.1 1zm.3-2.5c-.1.3-.4.5-.7.5-.2 0-.4 0-.5-.1l.6-2.2c.3.1.5.3.6.6.1.3.1.6 0 .8z"/>
+          </svg>
+          BTC
+        </label>
+        <label class="coin-item coin-label" title="Ethereum" for="checkbox-eth">
+          <input type="checkbox" id="checkbox-eth" value="eth" class="coin-checkbox" checked aria-checked="true" />
+          <svg class="coin-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="#627eea" aria-hidden="true" focusable="false"><path d="M16 1L6 16 16 28 26 16z"/></svg>
+          ETH
+        </label>
+        <label class="coin-item coin-label" title="Litecoin" for="checkbox-ltc">
+          <input type="checkbox" id="checkbox-ltc" value="ltc" class="coin-checkbox" checked aria-checked="true" />
+          <svg class="coin-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="#b8b8b8" aria-hidden="true" focusable="false"><circle cx="32" cy="32" r="31"/>
+          <path fill="#fff" d="M19 44l22-24h-9l-3 3-13 21z"/></svg>
+          LTC
+        </label>
+        <label class="coin-item coin-label" title="Ripple" for="checkbox-xrp">
+          <input type="checkbox" id="checkbox-xrp" value="xrp" class="coin-checkbox" checked aria-checked="true" />
+          <svg class="coin-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#00aae4" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="11" fill="none" stroke="#00aae4" stroke-width="2"/>
+            <path d="M8 16c5-4 4-10 8-12" stroke="#00aae4" stroke-width="2" fill="none" stroke-linecap="round"/>
+          </svg>
+          XRP
+        </label>
+        <label class="coin-item coin-label" title="Cardano" for="checkbox-ada">
+          <input type="checkbox" id="checkbox-ada" value="ada" class="coin-checkbox" checked aria-checked="true" />
+          <svg class="coin-icon" viewBox="0 0 64 64" fill="#0033ad" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="32" cy="32" r="30" fill="#0033ad"/>
+            <circle cx="32" cy="16" r="4" fill="#6f93cc"/>
+            <circle cx="20" cy="28" r="3" fill="#6f93cc"/>
+            <circle cx="44" cy="28" r="3" fill="#6f93cc"/>
+            <circle cx="16" cy="40" r="3" fill="#6f93cc"/>
+            <circle cx="32" cy="40" r="3" fill="#6f93cc"/>
+            <circle cx="48" cy="40" r="3" fill="#6f93cc"/>
+            <circle cx="20" cy="52" r="4" fill="#6f93cc"/>
+            <circle cx="44" cy="52" r="4" fill="#6f93cc"/>
+          </svg>
+          ADA
+        </label>
+        <label class="coin-item coin-label" title="Dogecoin" for="checkbox-doge">
+          <input type="checkbox" id="checkbox-doge" value="doge" class="coin-checkbox" checked aria-checked="true" />
+          <svg class="coin-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+            <circle cx="32" cy="32" r="30" fill="#c2a633"/>
+            <path fill="#fff" d="M22 44h7l3-16h5l-3 16h7v5H22z"/>
+            <path fill="#784f0f" d="M20 42v-4h3v-3h4v3h4v-3h3v7h-4v-3h-4v3z"/>
+          </svg>
+          DOGE
+        </label>
+      </div>
+    </div>
+  
+    <div class="button-row" role="group" aria-label="Control buttons">
+      <button id="start-btn">Start Brute Force</button>
+      <button id="stop-btn" disabled>Stop</button>
+    </div>
+  
+    <div class="form-row" style="flex-wrap: nowrap; gap: 40px;">
+      <div><label>Attempts:</label><div id="attempts-count" style="color:#5fd6dd;">0</div></div>
+      <div><label>Speed:</label> <div id="speed-count" style="color:#5fd6dd;">0</div> attempts/sec</div>
+    </div>
+  
+    <div class="form-row" style="flex-direction: column;">
+      <label>Progress:</label>
+      <div class="progress-bar-container" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="progress-bar-container">
+        <div class="progress-bar" id="progress-bar"></div>
+      </div>
+    </div>
+  
+    <div class="form-row" style="flex-direction: column;">
+      <label for="log-output" style="align-self: flex-start;">Brute Force Log Output:</label>
+      <textarea id="log-output" class="log-output" readonly aria-live="polite" aria-relevant="additions" tabindex="0"></textarea>
+    </div>
+  
+    <div class="form-row">
+      <label>Result:</label>
+      <div id="result-display" class="result-display" role="region" aria-live="polite" aria-atomic="true">--</div>
+    </div>
+  </div>
+  
+  <footer class="footer" tabindex="0">
+    &copy; 2024 CryptoBruteX SeedForce - Created by BLACKBOXAI
+  </footer>
+  
+  <script>
+  (() => {
+    'use strict';
+  
+    const coinWordlists = {
+      btc: [ "alpha", "bravo", "charlie", "delta", "echo", "foxtrot", "golf", "hotel", "india", "juliet" ],
+      eth: [ "kilo", "lima", "mike", "november", "oscar", "papa", "quebec", "romeo", "sierra", "tango" ],
+      ltc: [ "uniform", "victor", "whiskey", "xray", "yankee", "zulu", "red", "blue", "green", "yellow" ],
+      xrp: [ "orange", "black", "white", "silver", "gold", "bronze", "iron", "copper", "platinum", "diamond" ],
+      ada: [ "pearl", "topaz", "blackbird", "eagle", "falcon", "hawk", "owl", "raven", "sparrow", "cardinal" ],
+      doge: [ "dog", "coin", "bark", "moon", "wow", "funny", "meme", "shibe", "puppy", "cute" ]
+    };
+  
+    const phraseLengthInput = document.getElementById('phrase-length-input');
+    const startBtn = document.getElementById('start-btn');
+    const stopBtn = document.getElementById('stop-btn');
+    const logOutput = document.getElementById('log-output');
+    const attemptsCount = document.getElementById('attempts-count');
+    const speedCount = document.getElementById('speed-count');
+    const progressBar = document.getElementById('progress-bar');
+    const progressBarContainer = document.getElementById('progress-bar-container');
+    const resultDisplay = document.getElementById('result-display');
+    const coinCheckboxes = Array.from(document.querySelectorAll('.coin-checkbox'));
+  
+    let isRunning = false;
+    let stopFlag = false;
+    let attempts = 0;
+    let startTime = 0;
+    let lastUpdateTime = 0;
+    let lastAttempts = 0;
+    let activeWordlist = [];
+  
+    function createActiveWordlist() {
+      const selectedCoins = coinCheckboxes.filter(chk => chk.checked).map(chk => chk.value);
+      const wordsSet = new Set();
+      if(selectedCoins.length === 0) {
+        Object.values(coinWordlists).forEach(arr => arr.forEach(w => wordsSet.add(w)));
+      } else {
+        selectedCoins.forEach(coin => {
+          if(coinWordlists[coin]) {
+            coinWordlists[coin].forEach(w => wordsSet.add(w));
+          }
+        });
+      }
+      return Array.from(wordsSet);
+    }
+  
+    function generateRandomPhrase(length, wordlist) {
+      const words = [];
+      for(let i=0; i<length; i++) {
+        const idx = Math.floor(Math.random() * wordlist.length);
+        words.push(wordlist[idx]);
+      }
+      return words.join(' ');
+    }
+  
+    function log(msg) {
+      const ts = new Date().toLocaleTimeString();
+      logOutput.value += `${ts} ${msg}\n`;
+      logOutput.scrollTop = logOutput.scrollHeight;
+    }
+  
+    function reset() {
+      attempts = 0;
+      startTime = 0;
+      lastUpdateTime = 0;
+      lastAttempts = 0;
+      attemptsCount.textContent = '0';
+      speedCount.textContent = '0';
+      logOutput.value = '';
+      progressBar.style.width = '0%';
+      progressBarContainer.setAttribute('aria-valuenow', '0');
+      resultDisplay.textContent = '--';
+      stopFlag = false;
+    }
+  
+    function updateStats() {
+      const now = performance.now();
+      if(now - lastUpdateTime > 300) {
+        const speed = ((attempts - lastAttempts) / ((now - lastUpdateTime) / 1000)) | 0;
+        attemptsCount.textContent = attempts.toLocaleString();
+        speedCount.textContent = speed.toLocaleString();
+        lastAttempts = attempts;
+        lastUpdateTime = now;
+      }
+    }
+  
+    function animateProgressBar() {
+      if (!isRunning) return;
+      const now = performance.now();
+      const cycle = 10000;
+      const pos = (now - startTime) % cycle;
+      const pct = (pos / cycle) * 100;
+      progressBar.style.width = pct + '%';
+      progressBarContainer.setAttribute('aria-valuenow', pct.toFixed(2));
+      requestAnimationFrame(animateProgressBar);
+    }
+  
+    async function bruteForceSim() {
+      const phraseLength = Number(phraseLengthInput.value);
+      if([12,18,24].indexOf(phraseLength) === -1) {
+        alert('Seed phrase length must be 12, 18, or 24.');
+        return;
+      }
+  
+      activeWordlist = createActiveWordlist();
+      if(activeWordlist.length === 0) {
+        alert('Please select at least one crypto coin for wordlist.');
+        return;
+      }
+  
+      reset();
+  
+      isRunning = true;
+      startBtn.disabled = true;
+      stopBtn.disabled = false;
+      phraseLengthInput.disabled = true;
+      coinCheckboxes.forEach(chk => chk.disabled = true);
+  
+      startTime = performance.now();
+      lastUpdateTime = startTime;
+  
+      animateProgressBar();
+  
+      while(!stopFlag) {
+        attempts++;
+        const phrase = generateRandomPhrase(phraseLength, activeWordlist);
+  
+        if(attempts % 30 === 0) {
+          log(`Trying candidate seed phrase: "${phrase}"`);
+        }
+        if(attempts % 10 === 0) {
+          updateStats();
+          await new Promise(r => setTimeout(r, 10));
+        }
+      }
+  
+      log('Brute force stopped by user.');
+      resultDisplay.textContent = '(simulation stopped)';
+      isRunning = false;
+  
+      startBtn.disabled = false;
+      stopBtn.disabled = true;
+      phraseLengthInput.disabled = false;
+      coinCheckboxes.forEach(chk => chk.disabled = false);
+    }
+  
+    function onStart() {
+      if(isRunning) return;
+      stopFlag = false;
+      bruteForceSim();
+    }
+    function onStop() {
+      if(!isRunning) return;
+      stopFlag = true;
+    }
+  
+    startBtn.addEventListener('click', onStart);
+    stopBtn.addEventListener('click', onStop);
+  
+  })();
+  </script>
+  
+  </body>
+  </html>
+  
